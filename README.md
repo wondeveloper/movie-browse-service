@@ -10,6 +10,13 @@ At the time of your interview, you will receive a private GitHub repository cont
 
 Please follow the instructions below to confirm your setup.
 
+## Prerequisites
+
+Please ensure you have the following installed:
+
+- Java 17+
+- Maven
+
 ## Steps for Setup
 
 1. Clone this repository.
