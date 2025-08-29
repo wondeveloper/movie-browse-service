@@ -2,6 +2,8 @@ package com.vivek.imdb.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.vivek.imdb.dto.Cursor;
 import com.vivek.imdb.dto.MovieQueryDto;
 import com.vivek.imdb.dto.PagingMode;
@@ -13,10 +15,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 
 public class CursorUtil {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .registerModule(new Jdk8Module()).registerModule(new JavaTimeModule());
 
     public static Cursor decodeCursor(String cursorB64) {
         String original = new String(Base64.getUrlDecoder().decode(cursorB64), StandardCharsets.UTF_8);
@@ -59,6 +63,15 @@ public class CursorUtil {
             throw new IllegalStateException("Failed to decode token", e);
         }
     }
+
+//    public static TokenPayload decodePayloadCursor(String payload){
+//        try {
+//            byte[] json = Base64.getUrlDecoder().decode(payload);
+//            return MAPPER.readValue(json , SeekToken.class);
+//        } catch (Exception e) {
+//            throw new IllegalStateException("Failed to decode token", e);
+//        }
+//    }
 
 
     public static ObjectNode seekToken(Instant created, String id, int size, @Nullable Sort sort) {

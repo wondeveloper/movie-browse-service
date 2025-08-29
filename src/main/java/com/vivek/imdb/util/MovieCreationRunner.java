@@ -1,5 +1,6 @@
 package com.vivek.imdb.util;
 
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.javafaker.Faker;
 import com.vivek.imdb.entity.Movie;
 import com.vivek.imdb.repository.PaginationAndSearchingRepository;
@@ -8,14 +9,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.time.Year;
 import java.util.UUID;
 
-@Component
+@Configuration
 @RequiredArgsConstructor
 public class MovieCreationRunner implements CommandLineRunner {
 
@@ -53,5 +55,10 @@ public class MovieCreationRunner implements CommandLineRunner {
                 .subscribe(); // fire-and-forget so app can finish starting
 
 
+    }
+
+    @Bean
+    public Jdk8Module jdk8Module() {
+        return new Jdk8Module();
     }
 }

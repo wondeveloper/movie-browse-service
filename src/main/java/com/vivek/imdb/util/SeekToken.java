@@ -9,13 +9,13 @@ import java.util.Optional;
 public record SeekToken(
         String version,
         SortSpec sort,
-        String encodedCursor,
+        //String encodedCursor,
         int size,
         int nextPageNumber,
         Long totalSize,
         PagingMode mode,
-        Map<String,Object> prev,
-        Optional<String> lastId
+        Map<String,String> prev,
+        String lastId
 
 ) implements TokenPayload {
     public SeekToken {

@@ -23,21 +23,20 @@ import static com.vivek.imdb.util.CursorUtil.*;
 
 @Service("seekMovieService")
 @RequiredArgsConstructor
-public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
+public class CursorServiceImpl implements MoviePaginationService<OffsetToken> {
 
     private final PaginationAndSearchingRepository paginationRepo;
 
     private final R2dbcEntityTemplate template;
 
     @Override
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchMovies(Mono<MovieQueryDto> queryDtoMono) {
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchMovies(Mono<MovieQueryDto> queryDtoMono) {
         return queryDtoMono
                 .transform(RequestValidator.validateClientCursorV2()) // assume this converts DTO -> MovieQuery
                 .flatMap(this::dispatch); // keep everything non-blocking
     }
 
-    private Mono<CursorPage<MovieDetails, SeekToken>> dispatch(MovieQuery mquery) {
-        // Java 21 pattern matching switch; if you're on 17, use if/else
+    private Mono<CursorPage<MovieDetails, OffsetToken>> dispatch(MovieQuery mquery) {
         return switch (mquery) {
             case OffsetQuery q -> handleOffset(q);
             case CursorQuery q -> handleSeek(q);
@@ -45,7 +44,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
         };
     }
 
-    private Mono<CursorPage<MovieDetails, SeekToken>> handleOffset(OffsetQuery q) {
+    private Mono<CursorPage<MovieDetails, OffsetToken>> handleOffset(OffsetQuery q) {
         final Sort sort = q.sort().toSortOrUnSorted();
         final int size = PagingDefaults.sizeOrDefault(q.size());
         final int page = PagingDefaults.pageOrDefault(q.page());
@@ -60,7 +59,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
                 .map(tuple -> buildPageFromOffset(tuple.getT1(), tuple.getT2(), sort, size, page));
     }
 
-    private Mono<CursorPage<MovieDetails, SeekToken>> handleSeek(CursorQuery q) {
+    private Mono<CursorPage<MovieDetails, OffsetToken>> handleSeek(CursorQuery q) {
         final TokenPayload payload = decodePayloadCursor(q.cursorB64());
         if (!(payload instanceof SeekToken seekToken)) {
             return Mono.error(new IllegalArgumentException("Invalid cursor payload type"));
@@ -70,13 +69,16 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
         final int size =  PagingDefaults.sizeOrDefault(seekToken.size());
         //final int nextPage = seekToken.nextPageNumber();
         final PageRequest pageable = PageRequest.of(0, size + 1, sort); // 0 since we need first page after sorting
-        Map<String,Object> map = seekToken.prev();
-        Instant createdAfter = (Instant) map.get("createdAt");
+        Map<String,String> map = seekToken.prev();
+        Instant createdAfter = map.get("createdAt") != null ? Instant.parse(map.get("createdAt")) : null;
         Mono<List<Movie>> movies;
-        if (null != createdAfter){
-            movies = paginationRepo.findByCreatedAtAfterOrCreatedAtIsAndIdGreaterThan(createdAfter, createdAfter,seekToken.lastId().get(), pageable).collectList();
+        if (null != createdAfter && !seekToken.lastId().isEmpty()){
+            movies = paginationRepo.findByCreatedAtAfterOrCreatedAtIsAndIdGreaterThan(createdAfter, createdAfter,seekToken.lastId(), pageable).collectList();
 
-        }else {
+        }else if (null != createdAfter){
+            movies = paginationRepo.findByCreatedAtAfterOrCreatedAtIs(createdAfter, createdAfter, pageable).collectList();
+
+        } else {
             movies = paginationRepo.findAllBy(pageable).collectList();
         }
         return Mono.zip(
@@ -86,7 +88,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
                 .map(tuple -> buildPageFromSeek(tuple.getT1(), tuple.getT2(), seekToken));
     }
 
-    private Mono<CursorPage<MovieDetails, SeekToken>> handleSeek2(CursorQuery q) {
+    private Mono<CursorPage<MovieDetails, OffsetToken>> handleSeek2(CursorQuery q) {
         final TokenPayload payload = decodePayloadCursor(q.cursorB64());
         if (!(payload instanceof SeekToken seekToken)) {
             return Mono.error(new IllegalArgumentException("Invalid cursor payload type"));
@@ -103,7 +105,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
         final int size = Math.max(1, seekToken.size());
         //final int nextPage = seekToken.nextPageNumber();
         //final PageRequest pageable = PageRequest.of(nextPage, size + 1, sort);
-        Map<String,Object> lastKeys = Optional.ofNullable(seekToken.prev()).orElse(Map.of());
+        Map<String,String> lastKeys = Optional.ofNullable(seekToken.prev()).orElse(Map.of());
         Criteria where = lastKeys.isEmpty() ? null : buildKeysetCriteria(orders, lastKeys);
         Query query = where == null ? Query.empty() : Query.query(where).sort(Sort.by(orders)).limit(size+1);
 //        List<Criteria> criteria = map.entrySet().stream().map(p -> Criteria.where(p.getKey()).greaterThan(p.getValue()))
@@ -119,7 +121,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
                 .map(tuple -> buildPageFromSeek(tuple.getT1(), tuple.getT2(), seekToken));
     }
 
-    private Criteria buildKeysetCriteria(List<Sort.Order> orders, Map<String, Object> keys) {
+    private Criteria buildKeysetCriteria(List<Sort.Order> orders, Map<String, String> keys) {
         Criteria chain = null;
         List<Criteria> equalsSoFar = new ArrayList<>();
         for (Sort.Order order : orders){
@@ -139,7 +141,7 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
         return chain;
     }
 
-    private CursorPage<MovieDetails, SeekToken> buildPageFromOffset(
+    private CursorPage<MovieDetails, OffsetToken> buildPageFromOffset(
             List<Movie> fetched, long totalCount, Sort sort, int size, int page
     ) {
         final boolean hasMore = fetched.size() > size;
@@ -147,54 +149,48 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
 
         // If you're intentionally carrying an OffsetToken inside a SeekToken (hybrid),
         // keep it consistent; otherwise consider changing the generic to TokenPayload.
-        final OffsetToken nextOffsetToken = new OffsetToken("V1", SortSpec.sort(sort), size, page + 1);
-        final String nextCursor = hasMore ? encodePayloadCursor(nextOffsetToken) : null;
         String lastId = pageSlice.isEmpty() ? "" : pageSlice.getLast() == null ? "" : pageSlice.getLast().getId();
         final SeekToken nextSeekToken = new SeekToken(
                 "V1",
                 SortSpec.sort(sort),
-                nextCursor,        // note: this is an encoded *offset* token per your original design
+                //nextCursor,        // note: this is an encoded *offset* token per your original design
                 size,
                 page + 1,
                 totalCount,
                 PagingMode.OFFSET,
                 Map.of(),
-                Optional.ofNullable(lastId)
+                lastId
         );
 
+        final String nextCursor = hasMore ? encodePayloadCursor(nextSeekToken) : null;
+        final OffsetToken nextOffsetToken = new OffsetToken("V1", SortSpec.sort(sort), size, page + 1, nextCursor);
         final List<MovieDetails> items = pageSlice.stream()
                 .map(EntityMapper::convertToMovieDetails)
                 .toList();
 
-        return new CursorPage<>(items, nextSeekToken);
+        return new CursorPage<>(items, nextOffsetToken);
     }
 
-    private CursorPage<MovieDetails, SeekToken> buildPageFromSeek(
+    private CursorPage<MovieDetails, OffsetToken> buildPageFromSeek(
             List<Movie> fetched, long totalCount, SeekToken current
     ) {
         final int size = current.size();
         final boolean hasMore = fetched.size() > size;
         final List<Movie> pageSlice = hasMore ? fetched.subList(0, size) : fetched;
         // Preserve your “hybrid” behavior: embed an offset token as nextCursor.
-        final OffsetToken nextOffsetToken = new OffsetToken(
-                "V1",
-                SortSpec.sort(current.sort().toSortOrUnSorted()),
-                size,
-                current.nextPageNumber() + 1
-        );
-        final String nextOffsetCursor = hasMore ? encodePayloadCursor(nextOffsetToken) : null;
+
         var last = pageSlice.getLast();
         String lastId = pageSlice.isEmpty() ? "" : pageSlice.getLast() == null ? "" : pageSlice.getLast().getId();
 
         BeanWrapper wrapper = new BeanWrapperImpl(last);
 
-        Map<String, Object> map = current.sort().orders().stream()
+        Map<String, String> map = current.sort().orders().stream()
                 .map(OrderSpec::property)
                 .filter(p -> p != null && !p.isBlank())
                 .filter(wrapper::isReadableProperty)   // avoid NotReadablePropertyException
                 .collect(
                         LinkedHashMap::new,
-                        (m, prop) -> m.put(prop, wrapper.getPropertyValue(prop)), // allows nulls
+                        (m, prop) -> m.put(prop, String.valueOf(wrapper.getPropertyValue(prop))), // allows nulls
                         Map::putAll
                 );
 
@@ -202,20 +198,30 @@ public class CursorServiceImpl implements MoviePaginationService<SeekToken> {
         final SeekToken nextSeekToken = new SeekToken(
                 "V1",
                 SortSpec.sort(current.sort().toSortOrUnSorted()),
-                nextOffsetCursor,              // you were storing the *offset* cursor here
+                //nextOffsetCursor,              // you were storing the *offset* cursor here
                 size,
                 current.nextPageNumber() + 1,
                 totalCount,
                 PagingMode.SEEK_CURSOR,
                 map,
-                Optional.of(lastId)
+                lastId
         );
+
+        final String nextOffsetCursor = hasMore ? encodePayloadCursor(nextSeekToken) : null;
+
+        final OffsetToken nextOffsetToken = new OffsetToken(
+                "V1",
+                SortSpec.sort(current.sort().toSortOrUnSorted()),
+                size,
+                current.nextPageNumber() + 1,
+                nextOffsetCursor
+                );
 
         final List<MovieDetails> items = pageSlice.stream()
                 .map(EntityMapper::convertToMovieDetails)
                 .toList();
 
-        return new CursorPage<>(items, nextSeekToken);
+        return new CursorPage<>(items, nextOffsetToken);
     }
 
 }

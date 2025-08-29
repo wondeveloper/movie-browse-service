@@ -25,11 +25,11 @@ public class MovieController {
 
     @Autowired
     @Qualifier("offsetMovieService")
-    private MoviePaginationService<SeekToken> offsetMovieService;
+    private MoviePaginationService<OffsetToken> offsetMovieService;
 
     @Autowired
     @Qualifier("seekMovieService")
-    private MoviePaginationService<SeekToken> seekService;
+    private MoviePaginationService<OffsetToken> seekService;
 
 
     @PostMapping("add")
@@ -61,7 +61,7 @@ public class MovieController {
     }
 
     @GetMapping("page/offset")
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchNextPage(@RequestParam @Min(0) int page,
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchNextPage(@RequestParam @Min(0) int page,
                                                                    @RequestParam @Min(0) int size,
                                                                    @RequestParam(required = false) @ValidSort String sort){
         List<OrderSpec> orderSpecs = StringToOrderSpec.toOrderSpecList().apply(sort);
@@ -72,7 +72,7 @@ public class MovieController {
     }
 
     @GetMapping("page/seek")
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchNextPage(@RequestParam @Min(0) int size,
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchNextPage(@RequestParam @Min(0) int size,
                                                                    @RequestParam(required = false) String cursorB64){
         Mono<MovieQueryDto> movieQueryDto =  MovieQueryDto.seek(cursorB64, size);
         return seekService.fetchMovies(movieQueryDto)

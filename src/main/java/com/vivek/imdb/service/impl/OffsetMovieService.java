@@ -19,13 +19,13 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service("offsetMovieService")
-public class OffsetMovieService implements MoviePaginationService<SeekToken> {
+public class OffsetMovieService implements MoviePaginationService<OffsetToken> {
 
     @Autowired
     private PaginationAndSearchingRepository paginationAndSearchingRepository;
 
     @Override
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchMovies(Mono<MovieQueryDto> queryIn) {
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchMovies(Mono<MovieQueryDto> queryIn) {
         return queryIn.defaultIfEmpty(CursorUtil.createDefaultMovieQuery())
                 .map(query -> {
                     int page = query.page() == null ? 0 : Math.max(0, query.page());
@@ -46,28 +46,29 @@ public class OffsetMovieService implements MoviePaginationService<SeekToken> {
                                 var totalCount = tuple.getT2();
                                 int lastPage = (int) Math.max(0, (totalCount + rq.size - 1) / rq.size - 1);
 
-                                final OffsetToken nextOffsetToken = new OffsetToken(
-                                        "V1",
-                                        SortSpec.sort(rq.sort),
-                                        rq.size,
-                                        rq.page + 1
-                                );
-
-                                String encodedCursor = rq.page < lastPage
-                                        ? CursorUtil.encodePayloadCursor(nextOffsetToken) : null;
-
                                 final SeekToken nextSeekToken = new SeekToken(
                                         "V1",
                                         SortSpec.sort(rq.sort),
-                                        encodedCursor,
+                                       // encodedCursor,
                                         rq.size,
                                         rq.page + 1,
                                         totalCount,
                                         PagingMode.OFFSET,
                                         Map.of(),
-                                        Optional.ofNullable(lastDetails == null ? "" : lastDetails.id())
+                                        lastDetails == null ? "" : lastDetails.id()
                                 );
-                                return new CursorPage<>(movieDetailsList, nextSeekToken);
+
+                                String encodedCursor = rq.page < lastPage
+                                        ? CursorUtil.encodePayloadCursor(nextSeekToken) : null;
+                                final OffsetToken nextOffsetToken = new OffsetToken(
+                                        "V1",
+                                        SortSpec.sort(rq.sort),
+                                        rq.size,
+                                        rq.page + 1,
+                                        encodedCursor
+                                );
+
+                                return new CursorPage<>(movieDetailsList, nextOffsetToken);
                             });
                 });
     }
