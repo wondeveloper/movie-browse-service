@@ -123,6 +123,7 @@
 							<artifactId>lombok</artifactId>
 							<version>1.18.38</version>
 						</path>
+						<!-- update other processors too (MapStruct ≥ 1.6, etc.) -->
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
