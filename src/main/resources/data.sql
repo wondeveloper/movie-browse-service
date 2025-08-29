@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS MOVIE;
+
+CREATE TABLE MOVIE (
+    id            VARCHAR(100) PRIMARY KEY,
+    title         VARCHAR(100),
+    release_year  VARCHAR(100),
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
