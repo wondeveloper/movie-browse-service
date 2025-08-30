@@ -1,11 +1,14 @@
 package com.vivek.imdb.controller;
 
+import com.vivek.imdb.config.OffsetToken;
+import com.vivek.imdb.config.ValidSort;
 import com.vivek.imdb.dto.*;
 import com.vivek.imdb.exceptions.MovieNotFoundException;
 import com.vivek.imdb.service.MoviePaginationService;
 import com.vivek.imdb.service.MovieService;
 import com.vivek.imdb.util.*;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.validation.annotation.Validated;
@@ -17,7 +20,6 @@ import java.util.List;
 @RestController
 @RequestMapping("movie")
 @Validated
-//@RequiredArgsConstructor
 public class MovieController {
 
     @Autowired
@@ -25,11 +27,11 @@ public class MovieController {
 
     @Autowired
     @Qualifier("offsetMovieService")
-    private MoviePaginationService<SeekToken> offsetMovieService;
+    private MoviePaginationService<OffsetToken> offsetMovieService;
 
     @Autowired
     @Qualifier("seekMovieService")
-    private MoviePaginationService<SeekToken> seekService;
+    private MoviePaginationService<OffsetToken> seekService;
 
 
     @PostMapping("add")
@@ -61,21 +63,29 @@ public class MovieController {
     }
 
     @GetMapping("page/offset")
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchNextPage(@RequestParam @Min(0) int page,
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchNextPage(@RequestParam @Min(0) int page,
                                                                    @RequestParam @Min(0) int size,
                                                                    @RequestParam(required = false) @ValidSort String sort){
         List<OrderSpec> orderSpecs = StringToOrderSpec.toOrderSpecList().apply(sort);
         SortSpec sortSpec = new SortSpec(orderSpecs);
-        Mono<MovieQueryDto> movieQueryDto =  MovieQueryDto.offset(size, page, sortSpec);
+        Mono<MovieQueryDto> movieQueryDto =  MovieQueryDto.offset(page, size, sortSpec);
         return offsetMovieService.fetchMovies(movieQueryDto)
                 .switchIfEmpty(Mono.error(new RuntimeException("Something went wrong while fetching pages through offset")));
     }
 
     @GetMapping("page/seek")
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchNextPage(@RequestParam @Min(0) int size,
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchNextPage(@RequestParam @Min(0) int page,
                                                                    @RequestParam(required = false) String cursorB64){
-        Mono<MovieQueryDto> movieQueryDto =  MovieQueryDto.seek(cursorB64, size);
+        Mono<MovieQueryDto> movieQueryDto =  MovieQueryDto.seek(cursorB64, page);
         return seekService.fetchMovies(movieQueryDto)
                 .switchIfEmpty(Mono.error(new RuntimeException("Something went wrong while fetching pages through seek")));
     }
+
+    @GetMapping("search")
+    public Mono<MovieDetails> searchMovie(@RequestParam @NotBlank String title,
+                                                                     @RequestParam @NotBlank String releaseYear){
+        return movieService.findMovieByTitleAndYear(title, releaseYear)
+                .switchIfEmpty(ApplicationException.MovieNotFound(title,releaseYear));
+    }
+
 }

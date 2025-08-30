@@ -13,4 +13,6 @@ public interface MovieService {
     Mono<Boolean> deleteMovie(String id);
 
     Mono<MovieDetails> getMovie(String id);
+
+    Mono<MovieDetails> findMovieByTitleAndYear(String title, String releaseYear);
 }

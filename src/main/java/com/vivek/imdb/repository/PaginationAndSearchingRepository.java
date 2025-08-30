@@ -17,5 +17,11 @@ public interface PaginationAndSearchingRepository extends CursorRepository {
             Pageable pageable
     );
 
+    Flux<Movie> findByCreatedAtAfterOrCreatedAtIs(
+            Instant lastCreatedAt,
+            Instant lastCreatedAtEq,
+            Pageable pageable
+    );
+
     Flux<Movie> findAllBy(Pageable pageable);
 }

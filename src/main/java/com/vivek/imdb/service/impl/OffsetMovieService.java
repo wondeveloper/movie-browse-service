@@ -6,8 +6,9 @@ import com.vivek.imdb.service.MoviePaginationService;
 import com.vivek.imdb.repository.PaginationAndSearchingRepository;
 import com.vivek.imdb.util.CursorUtil;
 import com.vivek.imdb.util.EntityMapper;
-import com.vivek.imdb.util.OffsetToken;
-import com.vivek.imdb.util.SeekToken;
+import com.vivek.imdb.config.OffsetToken;
+import com.vivek.imdb.config.SeekToken;
+import com.vivek.imdb.util.PagingDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -16,21 +17,19 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service("offsetMovieService")
-public class OffsetMovieService implements MoviePaginationService<SeekToken> {
+public class OffsetMovieService implements MoviePaginationService<OffsetToken> {
 
     @Autowired
     private PaginationAndSearchingRepository paginationAndSearchingRepository;
 
     @Override
-    public Mono<CursorPage<MovieDetails, SeekToken>> fetchMovies(Mono<MovieQueryDto> queryIn) {
+    public Mono<CursorPage<MovieDetails, OffsetToken>> fetchMovies(Mono<MovieQueryDto> queryIn) {
         return queryIn.defaultIfEmpty(CursorUtil.createDefaultMovieQuery())
                 .map(query -> {
-                    int page = query.page() == null ? 0 : Math.max(0, query.page());
-                    int size = query.size() == null ? 20 : Math.max(1, Math.min(query.size(),200));
-                    //Sort sort = query.sort() == null ? Sort.by("createdAt").ascending(): query.sort();
+                    int page = PagingDefaults.pageOrDefault(query.page());
+                    int size = PagingDefaults.sizeOrDefault(query.size());
                     Sort sort = query.sort() == null ? Sort.by(Sort.Order.asc("createdAt"), Sort.Order.asc("id")) : query.sort().toSortOrUnSorted();
                     return new ResolvedQuery(page, size, sort, query);
                 })
@@ -42,32 +41,35 @@ public class OffsetMovieService implements MoviePaginationService<SeekToken> {
                             .map(tuple -> {
                                 var list = tuple.getT1();
                                 List<MovieDetails> movieDetailsList = list.stream().map(EntityMapper::convertToMovieDetails).toList();
-                                MovieDetails lastDetails = movieDetailsList.getLast() == null ? null : movieDetailsList.getLast();
+                                MovieDetails lastDetails = movieDetailsList.isEmpty() ? null : movieDetailsList.getLast();
                                 var totalCount = tuple.getT2();
                                 int lastPage = (int) Math.max(0, (totalCount + rq.size - 1) / rq.size - 1);
+                                int nextPage = (totalCount - (long) rq.page * rq.size) > 0 ? rq.page + 1: Integer.MAX_VALUE;
+                                final SeekToken nextSeekToken = new SeekToken(
+                                        "V1",
+                                        SortSpec.sort(rq.sort),
+                                       // encodedCursor,
+                                        rq.size,
+                                        nextPage,
+                                        totalCount,
+                                        PagingMode.OFFSET,
+                                        Map.of(),
+                                        lastDetails == null ? "" : lastDetails.id()
+                                );
 
+//                                String encodedCursor = rq.page < lastPage
+//                                        ? CursorUtil.encodePayloadCursor(nextSeekToken) : null;
+                                String encodedCursor = nextPage != Integer.MAX_VALUE
+                                        ? CursorUtil.encodePayloadCursor(nextSeekToken) : null;
                                 final OffsetToken nextOffsetToken = new OffsetToken(
                                         "V1",
                                         SortSpec.sort(rq.sort),
                                         rq.size,
-                                        rq.page + 1
+                                        nextPage,
+                                        encodedCursor
                                 );
 
-                                String encodedCursor = rq.page < lastPage
-                                        ? CursorUtil.encodePayloadCursor(nextOffsetToken) : null;
-
-                                final SeekToken nextSeekToken = new SeekToken(
-                                        "V1",
-                                        SortSpec.sort(rq.sort),
-                                        encodedCursor,
-                                        rq.size,
-                                        rq.page + 1,
-                                        totalCount,
-                                        PagingMode.OFFSET,
-                                        Map.of(),
-                                        Optional.ofNullable(lastDetails == null ? "" : lastDetails.id())
-                                );
-                                return new CursorPage<>(movieDetailsList, nextSeekToken);
+                                return new CursorPage<>(movieDetailsList, nextOffsetToken);
                             });
                 });
     }

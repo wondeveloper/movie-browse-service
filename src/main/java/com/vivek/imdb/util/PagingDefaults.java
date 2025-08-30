@@ -10,10 +10,10 @@ public final class PagingDefaults {
     public static final SortSpec DEFAULT_SORT = SortSpec.sort(Sort.by(Sort.Order.asc("createdAt"), Sort.Order.asc("id")));
 
     public static int sizeOrDefault(Integer size) {
-        return (size == null || size <= 0) ? DEFAULT_SIZE : size;
+        return (size == null || size <= 0 || size == Integer.MAX_VALUE) ? DEFAULT_SIZE : size;
     }
     public static int pageOrDefault(Integer page) {
-        return (page == null || page < 0) ? DEFAULT_PAGE : page;
+        return (page == null || page < 0 || page == Integer.MAX_VALUE) ? DEFAULT_PAGE : page;
     }
     public static SortSpec sortOrDefault(SortSpec sort) {
         return (sort == null) ? DEFAULT_SORT : sort;

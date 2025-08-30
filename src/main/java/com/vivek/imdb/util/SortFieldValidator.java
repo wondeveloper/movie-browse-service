@@ -1,5 +1,6 @@
 package com.vivek.imdb.util;
 
+import com.vivek.imdb.config.ValidSort;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

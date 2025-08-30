@@ -1,5 +1,6 @@
-package com.vivek.imdb.util;
+package com.vivek.imdb.config;
 
+import com.vivek.imdb.util.SortFieldValidator;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
