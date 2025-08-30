@@ -1,10 +1,9 @@
-package com.vivek.imdb.util;
+package com.vivek.imdb.config;
 
 import com.vivek.imdb.dto.PagingMode;
 import com.vivek.imdb.dto.SortSpec;
 
 import java.util.Map;
-import java.util.Optional;
 
 public record SeekToken(
         String version,

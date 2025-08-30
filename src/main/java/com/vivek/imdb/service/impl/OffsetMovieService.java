@@ -6,8 +6,8 @@ import com.vivek.imdb.service.MoviePaginationService;
 import com.vivek.imdb.repository.PaginationAndSearchingRepository;
 import com.vivek.imdb.util.CursorUtil;
 import com.vivek.imdb.util.EntityMapper;
-import com.vivek.imdb.util.OffsetToken;
-import com.vivek.imdb.util.SeekToken;
+import com.vivek.imdb.config.OffsetToken;
+import com.vivek.imdb.config.SeekToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -16,7 +16,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Service("offsetMovieService")
 public class OffsetMovieService implements MoviePaginationService<OffsetToken> {

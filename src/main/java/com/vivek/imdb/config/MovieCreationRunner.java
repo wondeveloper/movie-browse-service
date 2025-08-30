@@ -1,4 +1,4 @@
-package com.vivek.imdb.util;
+package com.vivek.imdb.config;
 
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.javafaker.Faker;

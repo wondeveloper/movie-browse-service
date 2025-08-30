@@ -1,4 +1,4 @@
-package com.vivek.imdb.util;
+package com.vivek.imdb.config;
 
 import com.vivek.imdb.dto.SortSpec;
 
