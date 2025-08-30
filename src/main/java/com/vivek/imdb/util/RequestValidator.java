@@ -1,5 +1,6 @@
 package com.vivek.imdb.util;
 
+import com.vivek.imdb.config.TokenPayload;
 import com.vivek.imdb.dto.*;
 import com.vivek.imdb.exceptions.CursorNotFoundException;
 import com.vivek.imdb.exceptions.InvalidCursorException;

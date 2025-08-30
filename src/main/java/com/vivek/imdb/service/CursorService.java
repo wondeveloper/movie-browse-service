@@ -2,7 +2,7 @@ package com.vivek.imdb.service;
 
 import com.vivek.imdb.dto.CursorPage;
 import com.vivek.imdb.entity.Movie;
-import com.vivek.imdb.util.SeekToken;
+import com.vivek.imdb.config.SeekToken;
 import jakarta.annotation.Nullable;
 import org.springframework.data.domain.Sort;
 import reactor.core.publisher.Mono;

@@ -19,12 +19,12 @@ public record MovieQueryDto(
         return Mono.just(new MovieQueryDto(PagingMode.SEEK_CURSOR_SORT, cursorB64, size, null, sort));
     }
 
-    public static Mono<MovieQueryDto> offset(Integer size, Integer page, @Nullable SortSpec sort){
-        return Mono.just(new MovieQueryDto(PagingMode.OFFSET, null, size, page , sort));
+    public static Mono<MovieQueryDto> offset(Integer page, Integer size, @Nullable SortSpec sort){
+        return Mono.just(new MovieQueryDto(PagingMode.OFFSET, null, page, size , sort));
     }
 
-    public static Mono<MovieQueryDto> offsetCount(Integer size, Integer page, @Nullable SortSpec sort){
-        return Mono.just(new MovieQueryDto(PagingMode.OFFSET_WITH_COUNT, null, size, page , sort));
+    public static Mono<MovieQueryDto> offsetCount(Integer page, Integer size, @Nullable SortSpec sort){
+        return Mono.just(new MovieQueryDto(PagingMode.OFFSET_WITH_COUNT, null, page, size , sort));
     }
 
 

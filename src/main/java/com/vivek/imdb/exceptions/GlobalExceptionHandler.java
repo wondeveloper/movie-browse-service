@@ -71,7 +71,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleMovieNotException(MovieNotFoundException exception){
         return build(HttpStatus.BAD_REQUEST, exception, problemDetail -> {
             problemDetail.setType(URI.create("http://example.com/problems/exception-guide"));
-            problemDetail.setTitle("No Movie for this id");
+            problemDetail.setTitle("No Movie for this condition - id or title or release year");
         });
     }
 

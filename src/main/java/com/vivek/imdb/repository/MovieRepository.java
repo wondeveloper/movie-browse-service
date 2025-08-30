@@ -14,4 +14,6 @@ public interface MovieRepository extends ReactiveCrudRepository<Movie, String> {
     @Modifying
     @Query("DELETE FROM movie WHERE id = :id")
     Mono<Integer> deleteMovieById(String id);
+
+    Mono<Movie> findByTitleAndReleaseYear(String title,String releaseYear);
 }
