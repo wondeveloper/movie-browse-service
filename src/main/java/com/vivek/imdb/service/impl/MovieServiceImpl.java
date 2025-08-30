@@ -5,11 +5,13 @@ import com.vivek.imdb.dto.MovieDto;
 import com.vivek.imdb.repository.MovieRepository;
 import com.vivek.imdb.service.MovieService;
 import com.vivek.imdb.util.EntityMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 @Service
+@Slf4j
 public class MovieServiceImpl implements MovieService {
 
     @Autowired
@@ -44,6 +46,13 @@ public class MovieServiceImpl implements MovieService {
     public Mono<MovieDetails> getMovie(String id) {
         return this.movieRepository.findById(id)
                 .switchIfEmpty(Mono.empty())
+                .map(EntityMapper::convertToMovieDetails);
+    }
+
+    @Override
+    public Mono<MovieDetails> findMovieByTitleAndYear(String title, String releaseYear) {
+        return this.movieRepository.findByTitleAndReleaseYear(title, releaseYear)
+                .doOnNext(p -> log.info("Movie found: title {} - Release Year: {}", p.getTitle(), p.getReleaseYear()))
                 .map(EntityMapper::convertToMovieDetails);
     }
 }

@@ -153,12 +153,14 @@ public class CursorServiceImpl implements MoviePaginationService<OffsetToken> {
         // If you're intentionally carrying an OffsetToken inside a SeekToken (hybrid),
         // keep it consistent; otherwise consider changing the generic to TokenPayload.
         String lastId = pageSlice.isEmpty() ? "" : pageSlice.getLast() == null ? "" : pageSlice.getLast().getId();
+        int nextPage = (totalCount - (long) page * size) > 0 ? page + 1: Integer.MAX_VALUE;
+
         final SeekToken nextSeekToken = new SeekToken(
                 "V1",
                 SortSpec.sort(sort),
                 //nextCursor,        // note: this is an encoded *offset* token per your original design
                 size,
-                page + 1,
+                nextPage,
                 totalCount,
                 PagingMode.OFFSET,
                 Map.of(),
@@ -166,7 +168,7 @@ public class CursorServiceImpl implements MoviePaginationService<OffsetToken> {
         );
 
         final String nextCursor = hasMore ? encodePayloadCursor(nextSeekToken) : null;
-        final OffsetToken nextOffsetToken = new OffsetToken("V1", SortSpec.sort(sort), size, page + 1, nextCursor);
+        final OffsetToken nextOffsetToken = new OffsetToken("V1", SortSpec.sort(sort), size, nextPage, nextCursor);
         final List<MovieDetails> items = pageSlice.stream()
                 .map(EntityMapper::convertToMovieDetails)
                 .toList();
@@ -196,14 +198,14 @@ public class CursorServiceImpl implements MoviePaginationService<OffsetToken> {
                         (m, prop) -> m.put(prop, String.valueOf(wrapper.getPropertyValue(prop))), // allows nulls
                         Map::putAll
                 );
-
+        int nextPage = (totalCount - (long) current.nextPageNumber() * size) > 0 ? current.nextPageNumber() + 1: Integer.MAX_VALUE;
         assert lastId != null;
         final SeekToken nextSeekToken = new SeekToken(
                 "V1",
                 SortSpec.sort(current.sort().toSortOrUnSorted()),
-                //nextOffsetCursor,              // you were storing the *offset* cursor here
+                //nextOffsetCursor,
                 size,
-                current.nextPageNumber() + 1,
+                nextPage,
                 totalCount,
                 PagingMode.SEEK_CURSOR,
                 map,
@@ -216,7 +218,7 @@ public class CursorServiceImpl implements MoviePaginationService<OffsetToken> {
                 "V1",
                 SortSpec.sort(current.sort().toSortOrUnSorted()),
                 size,
-                current.nextPageNumber() + 1,
+                nextPage,
                 nextOffsetCursor
                 );
 

@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 import java.time.Year;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 @RequiredArgsConstructor
@@ -34,27 +35,27 @@ public class MovieCreationRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-
         int endYear = Year.now().getValue();
         repository.count()
                         .flatMapMany(count -> {
                             if (count > 0) return Flux.empty();
                             log.info("Inserting the data -{}", count);
                             return Flux.range(0, totalMovie)
-                                    .delayElements(Duration.ofMillis(500))
+                                    //.delayElements(Duration.ofMillis(500))
                                     .map(p -> Movie.builder()
                                             .id(UUID.randomUUID().toString())
                                             .title(faker.artist().name())
                                             .isNew(true)
                                             .releaseYear(String.valueOf(faker.number().numberBetween(startYear, endYear)))
                                             .build());
-                        }).transform(this.repository::saveAll)
-                .doOnNext(m -> log.debug("Inserted: {}", m.getTitle()))
+                        })
+                .transform(this.repository::saveAll)
+                .doOnNext(m -> log.info("Inserted: {}", m.getTitle()))
+                .then(repository.count())
+                .doOnNext(p -> log.info("Total items saved : {}", p))
                 .doOnError(e -> log.error("Seeding failed", e))
-                .doOnComplete(() -> log.info("Seeding complete."))
+                //.doOnComplete(() ->log.info("Seeding complete."))
                 .subscribe(); // fire-and-forget so app can finish starting
-
-
     }
 
     @Bean

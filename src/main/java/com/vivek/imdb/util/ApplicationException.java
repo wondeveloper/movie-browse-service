@@ -18,4 +18,8 @@ public class ApplicationException {
     public static <T> Mono<T> MovieNotFound(String id){
         return Mono.error(new MovieNotFoundException("Movie %s is not found".formatted(id)));
     }
+
+    public static <T> Mono<T> MovieNotFound(String title, String releaseYear){
+        return Mono.error(new MovieNotFoundException("Movie %s Year %s is not found".formatted(title, releaseYear)));
+    }
 }
